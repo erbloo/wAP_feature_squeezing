@@ -1,0 +1,6 @@
+**/*.pyc
+**/__pycache__/
+**/*.tar
+**/*.csv
+/history/
+/temp/
