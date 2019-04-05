@@ -44,9 +44,9 @@ def video2imges(video_path, img_dir_folder, sub_folder=None):
     vid = imageio.get_reader(video_path,  'ffmpeg')
     for idx, image in enumerate(vid.iter_data()):
         img_pil = Image.fromarray(image)
-        img_pil.save(os.path.join(img_dir, "frame_%d.png" % idx))
+        img_pil.save(os.path.join(img_dir, "frame_{0:05d}.png".format(idx)))
 
 
 
 if __name__ == "__main__":
-    video2imges("/home/yantao/datasets/bdd_parts/cabc30fc-e7726578.mov", "/home/yantao/datasets/bdd_parts", sub_folder='benign')
+    video2imges("/home/yantao/datasets/bdd_parts/cad02f4a-dd2c4b41.mov", "/home/yantao/datasets/bdd_parts", sub_folder='benign')
