@@ -9,9 +9,34 @@ from perceptron.utils.image import letterbox_image, draw_letterbox
 import pickle
 import pdb
 
+video_name = 'cad02f4a-dd2c4b41'
+# cad02f4a-dd2c4b41 : 1~20
+frame_range = (1, 21)
+patch_dic = {
+    'frame_00001' : [179, 135, 215, 176],
+    'frame_00002' : [179, 135, 215, 176],
+    'frame_00003' : [179, 135, 215, 176],
+    'frame_00004' : [179, 135, 215, 176],
+    'frame_00005' : [179, 135, 215, 176],
+    'frame_00006' : [179, 135, 215, 176],
+    'frame_00007' : [179, 135, 215, 176],
+    'frame_00008' : [179, 135, 215, 176],
+    'frame_00009' : [179, 135, 215, 176],
+    'frame_00010' : [179, 135, 215, 176],
+    'frame_00011' : [179, 135, 215, 176],
+    'frame_00012' : [179, 135, 215, 176],
+    'frame_00013' : [179, 135, 215, 176],
+    'frame_00014' : [179, 135, 215, 176],
+    'frame_00015' : [179, 135, 215, 176],
+    'frame_00016' : [179, 135, 215, 176],
+    'frame_00017' : [179, 135, 215, 176],
+    'frame_00018' : [179, 135, 215, 176],
+    'frame_00019' : [179, 135, 215, 176],
+    'frame_00020' : [179, 135, 215, 176],
+}
+
 def get_patch_img():
-    video_name = 'cabc30fc-e7726578'
-    img_path = os.path.join("../../../../../../../../datasets/bdd_parts", video_name, "benign", 'frame_01173.png')
+    img_path = os.path.join("../../../../../../../../datasets/bdd_parts", video_name, "benign", 'frame_00001.png')
     image, shape = letterbox_image(
             data_format='channels_last', 
             fname=img_path
@@ -22,32 +47,7 @@ def get_patch_img():
     plt.show()
     pdb.set_trace()
 
-    # cabc30fc-e7726578 : 1173~1192
-    patch_dic = {
-        'frame_01173' : [227, 249, 237, 283],
-        'frame_01174' : [227, 249, 237, 283],
-        'frame_01175' : [227, 249, 237, 283],
-        'frame_01176' : [227, 249, 237, 283],
-        'frame_01177' : [227, 249, 237, 283],
-        'frame_01178' : [227, 249, 237, 283],
-        'frame_01179' : [227, 249, 237, 283],
-        'frame_01180' : [227, 249, 237, 283],
-        'frame_01181' : [227, 249, 237, 283],
-        'frame_01182' : [227, 249, 237, 283],
-        'frame_01183' : [227, 249, 237, 283],
-        'frame_01184' : [227, 249, 237, 283],
-        'frame_01185' : [227, 249, 237, 283],
-        'frame_01186' : [227, 249, 237, 283],
-        'frame_01187' : [227, 249, 237, 283],
-        'frame_01188' : [227, 249, 237, 283],
-        'frame_01189' : [227, 249, 237, 283],
-        'frame_01190' : [227, 249, 237, 283],
-        'frame_01191' : [227, 249, 237, 283],
-        'frame_01192' : [227, 249, 237, 283],
-    }
-
-
-    for idx in range(209, 229):
+    for idx in range(frame_range[0], frame_range[1]):
         img_name_noext = 'frame_{0:05d}'.format(idx)
         patch_bbox = patch_dic[img_name_noext]
         img_path = os.path.join("../../../../../../../../datasets/bdd_parts", video_name, "benign", img_name_noext + '.png')
@@ -72,31 +72,6 @@ def get_patch_adv():
     from perceptron.attacks.vanish_patch import PatchVanishAttack
     from perceptron.utils.criteria.detection import TargetClassMiss, RegionalTargetClassMiss
     from perceptron.defences.bit_depth import BitDepth
-    video_name = 'cabc30fc-e7726578'
-
-    # cabc30fc-e7726578 : 1173~1192
-    patch_dic = {
-        'frame_01173' : [227, 249, 237, 283],
-        'frame_01174' : [227, 249, 237, 283],
-        'frame_01175' : [227, 249, 237, 283],
-        'frame_01176' : [227, 249, 237, 283],
-        'frame_01177' : [227, 249, 237, 283],
-        'frame_01178' : [227, 249, 237, 283],
-        'frame_01179' : [227, 249, 237, 283],
-        'frame_01180' : [227, 249, 237, 283],
-        'frame_01181' : [227, 249, 237, 283],
-        'frame_01182' : [227, 249, 237, 283],
-        'frame_01183' : [227, 249, 237, 283],
-        'frame_01184' : [227, 249, 237, 283],
-        'frame_01185' : [227, 249, 237, 283],
-        'frame_01186' : [227, 249, 237, 283],
-        'frame_01187' : [227, 249, 237, 283],
-        'frame_01188' : [227, 249, 237, 283],
-        'frame_01189' : [227, 249, 237, 283],
-        'frame_01190' : [227, 249, 237, 283],
-        'frame_01191' : [227, 249, 237, 283],
-        'frame_01192' : [227, 249, 237, 283],
-    }
 
     benign_output_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "patch_det")
     adv_output_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "patch_adv_det")
@@ -109,7 +84,7 @@ def get_patch_adv():
 
     squz_fn = BitDepth(4)
 
-    for idx in range(209, 229):
+    for idx in range(frame_range[0], frame_range[1]):
         img_name_noext = 'frame_{0:05d}'.format(idx)
         patch_bbox = patch_dic[img_name_noext]
         img_path = os.path.join("../../../../../../../../datasets/bdd_parts", video_name, "patch", img_name_noext + '.png')
@@ -126,7 +101,6 @@ def get_patch_adv():
         output_benign_squz = model.predictions(image_squz)
         with open(os.path.join(benign_squz_output_dir, img_name_noext + '.pkl'), 'wb') as f:
             pickle.dump(output_benign_squz, f, protocol=pickle.HIGHEST_PROTOCOL)
-
         attack = PatchVanishAttack(model, criterion=RegionalTargetClassMiss(2, patch_bbox))
         
         draw = draw_letterbox(image, output_benign, shape[:2], model.class_names())
@@ -164,5 +138,5 @@ def get_patch_adv():
 
 if __name__ == "__main__":
     get_patch_img()
-    #get_patch_adv()
+    get_patch_adv()
 

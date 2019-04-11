@@ -176,7 +176,7 @@ def plot_curves_both(gt_array_wAP, pd_array_wAP, gt_array_mAP, pd_array_mAP, roc
     print("mAP auc: ", auc_mAP)
 
 def main():
-    result_path = "/home/yantao/workspace/projects/baidu/auto_driving_experiments/cabc30fc-e7726578_bit5.csv"
+    result_path = "test_pervasive_result.csv"
     result_f = open(result_path, 'r')
     wAP_benign_list = []
     wAP_adv_list = []

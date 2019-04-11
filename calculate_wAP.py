@@ -12,7 +12,7 @@ import pickle
 from perceptron.utils.image import letterbox_image, draw_letterbox
 from perceptron.models.detection.keras_yolov3 import KerasYOLOv3Model
 from perceptron.zoo.yolov3.model import YOLOv3
-from perceptron.attacks.carlini_wagner import CarliniWagnerLinfAttack
+from perceptron.benchmarks.carlini_wagner import CarliniWagnerLinfMetric
 from perceptron.utils.criteria.detection import TargetClassMiss, WeightedAP
 from perceptron.defences.bit_depth import BitDepth
 
@@ -81,8 +81,10 @@ def cal_mAP(gt_dict, pred_dict, num_classes, th_conf=0.5):
             
             ap, _, _ = voc_ap(rec, prec)
             sum_AP += ap
-
-        mAP = sum_AP / len(gt_counter_per_class)
+        if len(gt_counter_per_class) != 0:
+            mAP = sum_AP / len(gt_counter_per_class)
+        else:
+            mAP = 0.0
         return mAP
 
 def preprocess_ground_truth(ground_truth):
@@ -220,7 +222,7 @@ def main():
     kmodel.load_weights('/home/yantao/workspace/projects/baidu/aisec/perceptron/perceptron/zoo/yolov3/model_data/yolov3.h5')
     model = KerasYOLOv3Model(kmodel, bounds=(0, 1))
     
-    attack = CarliniWagnerLinfAttack(model, criterion=TargetClassMiss(2))
+    attack = CarliniWagnerLinfMetric(model, criterion=TargetClassMiss(2))
 
     squz_fn = BitDepth(4)
     weighted_ap = WeightedAP(416, 416, 0.0001)
@@ -274,11 +276,12 @@ def main():
         mAP_score_adv = cal_mAP(output_adv, output_adv_squz, num_classes=80)
         #scores_adv.append(wAP_score_adv)
         #scores_adv_mAP.append(mAP_score_adv)
-
+        
         print('wAP benign : ', wAP_score_benign)
         print('wAP adv : ', wAP_score_adv)
         print('mAP benign : ', mAP_score_benign)
         print('mAP adv : ', mAP_score_adv)
+        
 
         with open(csv_file_name, 'a') as out_file:
             out_file.write('{0},{1},{2},{3},{4}\n'.format(image_name_noext, str(wAP_score_benign), str(wAP_score_adv), str(mAP_score_benign), str(mAP_score_adv)))
