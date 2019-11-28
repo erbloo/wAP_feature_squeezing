@@ -1,18 +1,23 @@
 from __future__ import absolute_import
 import sys
-sys.path.append('/home/yantao/workspace/projects/baidu/aisec/perceptron')
+sys.path.append('/home/yantao/workspace/projects/perceptron-benchmark')
 
 from PIL import Image
 import os
+import shutil
 import numpy as np 
 
 from perceptron.defences.bit_depth import BitDepth
 
 
 def main():
-    video_name = 'cabc30fc-e7726578'
-    input_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "benign")
-    output_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "bit_5")
+    video_name = 'bdd10k_test'
+    input_dir = os.path.join("/home/yantao/workspace/datasets/wAP", video_name, "benign")
+    output_dir = os.path.join("/home/yantao/workspace/datasets/wAP", video_name, "bit_5")
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    os.mkdir(output_dir)
+
     image_name_list = os.listdir(input_dir)
 
     squz_fn = BitDepth(5)
