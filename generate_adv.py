@@ -38,8 +38,11 @@ def main():
                 fname=temp_img_path_benign,
                 absolute_path=True
         )
-
-        image_adv_benign = attack(image_benign, binary_search_steps=1, unpack=True)
+        try:
+            image_adv_benign = attack(image_benign, binary_search_steps=1, unpack=True)
+        except:
+            print('Attack failed.')
+            continue
         image_adv_benign_pil = Image.fromarray((image_adv_benign * 255).astype(np.uint8))
         image_adv_benign_pil.save(os.path.join(output_dir, image_name))
 
