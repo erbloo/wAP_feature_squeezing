@@ -3,6 +3,7 @@ import sys
 sys.path.append('/home/yantao/workspace/projects/perceptron-benchmark')
 
 from PIL import Image
+import argparse
 import numpy as np 
 import os
 import shutil
@@ -15,10 +16,10 @@ from perceptron.utils.image import load_image
 from perceptron.benchmarks.carlini_wagner import CarliniWagnerLinfMetric
 from perceptron.utils.criteria.detection import TargetClassMiss, TargetClassNumberChange
 
-def main():
-    imgs_dir = 'bdd10k_test'
-    input_dir = os.path.join("/home/yantao/workspace/datasets/wAP", imgs_dir, "benign")
-    output_dir = os.path.join("/home/yantao/workspace/datasets/wAP", imgs_dir, "adv")
+def main(args):
+    imgs_dir = args.imgs_dir
+    input_dir = os.path.join(args.data_dir, imgs_dir, "benign")
+    output_dir = os.path.join(args.data_dir, imgs_dir, "adv")
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
     os.mkdir(output_dir)
@@ -27,8 +28,11 @@ def main():
 
     kmodel = YOLOv3()
     model = KerasYOLOv3Model(kmodel, bounds=(0, 1))
-    attack = CarliniWagnerLinfMetric(model, criterion=TargetClassMiss(2))
-    # attack = CarliniWagnerLinfMetric(model, criterion=TargetClassNumberChange(2))
+    if args.attack_mtd == 'cw_targetclsmiss':
+        attack = CarliniWagnerLinfMetric(model, criterion=TargetClassMiss(2))
+        # attack = CarliniWagnerLinfMetric(model, criterion=TargetClassNumberChange(2))
+    else:
+        raise ValueError('Invalid attack method {0}'.format( args.attack_mtd))
 
     for _, image_name in enumerate(tqdm(image_name_list)):
 
@@ -49,4 +53,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Squeeze image generation.")
+    parser.add_argument('--data-dir', type=str, default='/home/yantao/workspace/datasets/wAP')
+    parser.add_argument('--imgs-dir', type=str, default='bdd10k_test')
+    parser.add_argument('--attack-mtd', type=str, default='cw_targetclsmiss')
+    args = parser.parse_args()
+    main(args)
