@@ -1,4 +1,5 @@
 import glob
+import argparse
 import pickle
 import numpy as np
 import csv
@@ -175,8 +176,8 @@ def plot_curves_both(gt_array_wAP, pd_array_wAP, gt_array_mAP, pd_array_mAP, roc
     print("wAP auc: ", auc_wAP)
     print("mAP auc: ", auc_mAP)
 
-def main():
-    result_path = "test_pervasive_result.csv"
+def main(args):
+    result_path = "bdd10k_test_{0}.csv".format(args.squeeze_type)
     result_f = open(result_path, 'r')
     wAP_benign_list = []
     wAP_adv_list = []
@@ -202,12 +203,12 @@ def main():
     pd_mAP = np.asarray(mAP_benign_list + mAP_adv_list) / np.maximum(max(mAP_benign_list), max(mAP_adv_list))
     gt_mAP = np.asarray([0] * len(mAP_benign_list) + [1] * len(mAP_adv_list))
 
-    plot_curves_both(gt_wAP, pd_wAP, gt_mAP, pd_mAP, 'roc_bit5.png', 'fpfn_bit5.png')
-    plot_curves(gt_wAP, pd_wAP, 'roc_wAP_bit5.png', 'fpfn_wAP_bit5.png')
+    plot_curves_both(gt_wAP, pd_wAP, gt_mAP, pd_mAP, 'roc_{0}.png'.format(args.squeeze_type), 'fpfn_{0}.png'.format(args.squeeze_type))
+    plot_curves(gt_wAP, pd_wAP, 'roc_wAP_{0}.png'.format(args.squeeze_type), 'fpfn_wAP_{0}.png'.format(args.squeeze_type))
     
 
-
-
-
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Plot.")
+    parser.add_argument('--squeeze-type', type=str, default='bit_5')
+    args = parser.parse_args()
+    main(args)

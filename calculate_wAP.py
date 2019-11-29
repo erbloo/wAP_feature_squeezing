@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import sys
-sys.path.append('/home/yantao/workspace/projects/baidu/aisec/perceptron')
+sys.path.append('/home/yantao/workspace/projects/perceptron-benchmark')
 
 from PIL import Image
 import numpy as np 
@@ -8,13 +8,10 @@ import os
 import pdb
 from collections import defaultdict
 import pickle
+import argparse
 
 from perceptron.utils.image import letterbox_image, draw_letterbox
-from perceptron.models.detection.keras_yolov3 import KerasYOLOv3Model
-from perceptron.zoo.yolov3.model import YOLOv3
-from perceptron.benchmarks.carlini_wagner import CarliniWagnerLinfMetric
-from perceptron.utils.criteria.detection import TargetClassMiss, WeightedAP
-from perceptron.defences.bit_depth import BitDepth
+from perceptron.utils.criteria.detection import WeightedAP
 
 def cal_mAP(gt_dict, pred_dict, num_classes, th_conf=0.5):
         class_pred_tmp = {}
@@ -102,7 +99,6 @@ def preprocess_ground_truth(ground_truth):
 
     return gt_counter_per_class, objects 
         
-
 def voc_ap(rec, prec):
     """
     --- Official matlab code VOC2012---
@@ -148,150 +144,68 @@ def voc_ap(rec, prec):
         ap += ((mrec[i] - mrec[i - 1]) * mpre[i])
     return ap, mrec, mpre
 
-def main_from_pickle():
-    video_name = 'cabc30fc-e7726578'
-    pickle_benign_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "benign_det_results")
-    pickle_adv_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "adv_det_results")
-    pickle_benign_squz_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "bit_5_det_results")
-    pickle_adv_squz_dir = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "adv_bit_5_det_results")
+def main_from_pickle(args):
+    imgs_dir = args.imgs_dir
+    pickle_benign_dir = os.path.join(args.data_dir, imgs_dir, "results_benign")
+    pickle_adv_dir = os.path.join(args.data_dir, imgs_dir, "results_adv")
+    pickle_benign_squz_dir = os.path.join(args.data_dir, imgs_dir, 'results_' + args.squeeze_type)
+    pickle_adv_squz_dir = os.path.join(args.data_dir, imgs_dir, 'results_' + args.squeeze_type + '_adv')
     image_name_list = os.listdir(pickle_benign_dir)
 
-    weighted_ap = WeightedAP(416, 416, 0.0001)
+    weighted_ap = WeightedAP(416, 416, 1e-4)
+    _defaults = {
+        "alpha": 1e-3,
+        "lambda_tp_area": 0,
+        "lambda_tp_dis": 0,
+        "lambda_tp_cs": 0,
+        "lambda_tp_cls": 0.1,
+        "lambda_fp_area": 0,
+        "lambda_fp_cs": 0,
+        'lambda_fn_area': 0,
+        'lambda_fn_cs': 0,
+        'a_set': [1, 1, 1, 0.1],
+        'MINOVERLAP': 0.5,
+    }
+    weighted_ap.__dict__.update(_defaults)
 
-    scores_benign = []
-    scores_adv = []
-    csv_file_name = video_name + '_bit5.csv'
+    csv_file_name = imgs_dir + '_' + args.squeeze_type + '.csv'
     with open(csv_file_name, 'w') as out_file:
         out_file.write('{0},{1},{2},{3},{4}\n'.format('image_name', 'benign_wAP', 'adv_wAP', 'benign_mAP', 'adv_mAP'))
 
     for idx, image_name in enumerate(image_name_list):
-        '''
-        if idx % 10 == 0:
-            print('idx : ', idx)
-        '''
         image_name_noext = os.path.splitext(image_name)[0]
 
         with open(os.path.join(pickle_benign_dir, image_name_noext + '.pkl'), 'rb') as handle:
             output_benign = pickle.load(handle)
-        #print(output_benign)
-        #draw = draw_letterbox(image, output_benign, shape[:2], model.class_names())
-        #draw.save('benign.png')
 
         with open(os.path.join(pickle_benign_squz_dir, image_name_noext + '.pkl'), 'rb') as handle:
             output_benign_squz = pickle.load(handle)
-        #print(output_benign_squz)
-        #draw = draw_letterbox(image_squz, output_benign_squz, shape[:2], model.class_names())
-        #draw.save('benign_squz.png')
 
         wAP_score_benign = weighted_ap.distance_score(output_benign, output_benign_squz)
         mAP_score_benign = cal_mAP(output_benign, output_benign_squz, num_classes=80)
-        #scores_benign_wAP.append(wAP_score_benign)
-        #scores_benign_mAP.append(mAP_score_benign)
 
         with open(os.path.join(pickle_adv_dir, image_name_noext + '.pkl'), 'rb') as handle:
             output_adv = pickle.load(handle)
-        #print(output_adv)
-        #draw = draw_letterbox(image_adv, output_adv, shape[:2], model.class_names())
-        #draw.save('adv.png')
 
         with open(os.path.join(pickle_adv_squz_dir, image_name_noext + '.pkl'), 'rb') as handle:
             output_adv_squz = pickle.load(handle)
-        #print(output_adv_squz)
-        #draw = draw_letterbox(image_adv_squz, output_adv_squz, shape[:2], model.class_names())
-        #draw.save('adv_squz.png')
 
         wAP_score_adv = weighted_ap.distance_score(output_adv, output_adv_squz)
         mAP_score_adv = cal_mAP(output_adv, output_adv_squz, num_classes=80)
-        #scores_adv.append(wAP_score_adv)
-        #scores_adv_mAP.append(mAP_score_adv)
-        '''
-        print('wAP benign : ', wAP_score_benign)
-        print('wAP adv : ', wAP_score_adv)
-        print('mAP benign : ', mAP_score_benign)
-        print('mAP adv : ', mAP_score_adv)
-        '''
-        with open(csv_file_name, 'a') as out_file:
-            out_file.write('{0},{1},{2},{3},{4}\n'.format(image_name_noext, str(wAP_score_benign), str(wAP_score_adv), str(mAP_score_benign), str(mAP_score_adv)))
 
-def main():
-    video_name = 'cabc30fc-e7726578'
-    dir_path = os.path.join("/home/yantao/datasets/bdd_parts", video_name, "benign")
-    image_name_list = os.listdir(dir_path)
-
-    kmodel = YOLOv3()
-    kmodel.load_weights('/home/yantao/workspace/projects/baidu/aisec/perceptron/perceptron/zoo/yolov3/model_data/yolov3.h5')
-    model = KerasYOLOv3Model(kmodel, bounds=(0, 1))
-    
-    attack = CarliniWagnerLinfMetric(model, criterion=TargetClassMiss(2))
-
-    squz_fn = BitDepth(4)
-    weighted_ap = WeightedAP(416, 416, 0.0001)
-
-    scores_benign = []
-    scores_adv = []
-    csv_file_name = video_name + '.csv'
-    with open(csv_file_name, 'w') as out_file:
-        out_file.write('{0},{1},{2},{3},{4}\n'.format('image_name', 'benign_wAP', 'adv_wAP', 'benign_mAP', 'adv_mAP'))
-
-    for idx, image_name in enumerate(image_name_list):
-        if idx % 10 == 0:
-            print('idx : ', idx)
-        image_name_noext = os.path.splitext(image_name)[0]
-
-        temp_img_path = os.path.join("../../../../../../../../datasets/bdd_parts", video_name, "benign", image_name)
-        image, shape = letterbox_image(
-                data_format='channels_last', 
-                fname=temp_img_path
-        ) 
-
-        output_benign = model.predictions(image)
-        #print(output_benign)
-        #draw = draw_letterbox(image, output_benign, shape[:2], model.class_names())
-        #draw.save('benign.png')
-
-        image_squz = squz_fn(image)
-        output_benign_squz = model.predictions(image_squz)
-        #print(output_benign_squz)
-        #draw = draw_letterbox(image_squz, output_benign_squz, shape[:2], model.class_names())
-        #draw.save('benign_squz.png')
-
-        wAP_score_benign = weighted_ap.distance_score(output_benign, output_benign_squz)
-        mAP_score_benign = cal_mAP(output_benign, output_benign_squz, num_classes=80)
-        #scores_benign_wAP.append(wAP_score_benign)
-        #scores_benign_mAP.append(mAP_score_benign)
-
-        image_adv = attack(image, output_benign)
-        output_adv = model.predictions(image_adv)
-        #print(output_adv)
-        #draw = draw_letterbox(image_adv, output_adv, shape[:2], model.class_names())
-        #draw.save('adv.png')
-
-        image_adv_squz = squz_fn(image_adv)
-        output_adv_squz = model.predictions(image_adv_squz)
-        #print(output_adv_squz)
-        #draw = draw_letterbox(image_adv_squz, output_adv_squz, shape[:2], model.class_names())
-        #draw.save('adv_squz.png')
-
-        wAP_score_adv = weighted_ap.distance_score(output_adv, output_adv_squz)
-        mAP_score_adv = cal_mAP(output_adv, output_adv_squz, num_classes=80)
-        #scores_adv.append(wAP_score_adv)
-        #scores_adv_mAP.append(mAP_score_adv)
-        
-        print('wAP benign : ', wAP_score_benign)
-        print('wAP adv : ', wAP_score_adv)
-        print('mAP benign : ', mAP_score_benign)
-        print('mAP adv : ', mAP_score_adv)
-        
+        # print('wAP benign : ', wAP_score_benign)
+        # print('wAP adv : ', wAP_score_adv)
+        # print('mAP benign : ', mAP_score_benign)
+        # print('mAP adv : ', mAP_score_adv)
 
         with open(csv_file_name, 'a') as out_file:
             out_file.write('{0},{1},{2},{3},{4}\n'.format(image_name_noext, str(wAP_score_benign), str(wAP_score_adv), str(mAP_score_benign), str(mAP_score_adv)))
-
-
-    
-
-
-
 
 
 if __name__ == "__main__":
-    main_from_pickle()
+    parser = argparse.ArgumentParser(description="wAP/mAP calculation.")
+    parser.add_argument('--data-dir', type=str, default='/home/yantao/workspace/datasets/wAP')
+    parser.add_argument('--imgs-dir', type=str, default='bdd10k_test')
+    parser.add_argument('--squeeze-type', type=str, default='bit_5')
+    args = parser.parse_args()
+    main_from_pickle(args)

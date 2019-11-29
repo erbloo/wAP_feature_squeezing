@@ -13,12 +13,12 @@ from perceptron.zoo.yolov3.model import YOLOv3
 from perceptron.models.detection.keras_yolov3 import KerasYOLOv3Model
 from perceptron.utils.image import load_image
 from perceptron.benchmarks.carlini_wagner import CarliniWagnerLinfMetric
-from perceptron.utils.criteria.detection import TargetClassMiss
+from perceptron.utils.criteria.detection import TargetClassMiss, TargetClassNumberChange
 
 def main():
-    video_name = 'bdd10k_test'
-    input_dir = os.path.join("/home/yantao/workspace/datasets/wAP", video_name, "benign")
-    output_dir = os.path.join("/home/yantao/workspace/datasets/wAP", video_name, "adv")
+    imgs_dir = 'bdd10k_test'
+    input_dir = os.path.join("/home/yantao/workspace/datasets/wAP", imgs_dir, "benign")
+    output_dir = os.path.join("/home/yantao/workspace/datasets/wAP", imgs_dir, "adv")
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
     os.mkdir(output_dir)
@@ -28,8 +28,9 @@ def main():
     kmodel = YOLOv3()
     model = KerasYOLOv3Model(kmodel, bounds=(0, 1))
     attack = CarliniWagnerLinfMetric(model, criterion=TargetClassMiss(2))
+    # attack = CarliniWagnerLinfMetric(model, criterion=TargetClassNumberChange(2))
 
-    for idx, image_name in enumerate(tqdm(image_name_list)):
+    for _, image_name in enumerate(tqdm(image_name_list)):
 
         temp_img_path_benign = os.path.join(input_dir, image_name)
 
