@@ -14,6 +14,7 @@ from perceptron.zoo.yolov3.model import YOLOv3
 from perceptron.models.detection.keras_yolov3 import KerasYOLOv3Model
 from perceptron.utils.image import load_image
 from perceptron.benchmarks.carlini_wagner import CarliniWagnerLinfMetric
+from perceptron.benchmarks.additive_noise import AdditiveGaussianNoiseMetric
 from perceptron.utils.criteria.detection import TargetClassMiss, TargetClassNumberChange
 
 def main(args):
@@ -30,7 +31,9 @@ def main(args):
     model = KerasYOLOv3Model(kmodel, bounds=(0, 1))
     if args.attack_mtd == 'cw_targetclsmiss':
         attack = CarliniWagnerLinfMetric(model, criterion=TargetClassMiss(2))
-        # attack = CarliniWagnerLinfMetric(model, criterion=TargetClassNumberChange(2))
+        
+    elif args.attack_mtd == 'noise_numberchange':
+        attack = AdditiveGaussianNoiseMetric(model, criterion=TargetClassNumberChange(-1))
     else:
         raise ValueError('Invalid attack method {0}'.format( args.attack_mtd))
 
@@ -43,11 +46,17 @@ def main(args):
                 fname=temp_img_path_benign,
                 absolute_path=True
         )
+        
         try:
-            image_adv_benign = attack(image_benign, binary_search_steps=1, unpack=True)
+            annotation_ori = model.predictions(image_benign)
+            if args.attack_mtd == 'cw_targetclsmiss':
+                image_adv_benign = attack(image_benign, binary_search_steps=1, unpack=True)
+            elif args.attack_mtd == 'noise_numberchange':
+                image_adv_benign = attack(image_benign, annotation_ori, epsilons=1000, unpack=True)
         except:
             print('Attack failed.')
             continue
+
         image_adv_benign_pil = Image.fromarray((image_adv_benign * 255).astype(np.uint8))
         image_adv_benign_pil.save(os.path.join(output_dir, image_name))
 
