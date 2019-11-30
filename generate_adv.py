@@ -55,7 +55,7 @@ def main(args):
             annotation_ori = model.predictions(image_benign)
             if args.attack_mtd == 'cw_targetclsmiss':
                 image_adv_benign = attack(image_benign, binary_search_steps=1, unpack=True)
-            else
+            else:
                 image_adv_benign = attack(image_benign, annotation_ori, epsilons=1000, unpack=True)
         except:
             print('Attack failed.')
