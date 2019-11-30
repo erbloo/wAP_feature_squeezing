@@ -177,7 +177,7 @@ def plot_curves_both(gt_array_wAP, pd_array_wAP, gt_array_mAP, pd_array_mAP, roc
     print("mAP auc: ", auc_mAP)
 
 def main(args):
-    result_path = "bdd10k_test_{0}.csv".format(args.squeeze_type)
+    result_path = "{1}_{0}.csv".format(args.squeeze_type, args.imgs_dir)
     result_f = open(result_path, 'r')
     wAP_benign_list = []
     wAP_adv_list = []
@@ -209,6 +209,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot.")
+    parser.add_argument('--imgs-dir', type=str, default='bdd10k_test')
     parser.add_argument('--squeeze-type', type=str, default='bit_5')
     args = parser.parse_args()
     main(args)
