@@ -2,7 +2,5 @@
 **/__pycache__/
 **/*.tar
 **/*.csv
-**/*.png
 /history/
 /temp/
-results/
