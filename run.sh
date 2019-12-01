@@ -10,4 +10,4 @@ CUDA_VISIBLE_DEVICES=3 python generate_squeeze.py ori --imgs-dir ${IMGS_DIR} --s
 CUDA_VISIBLE_DEVICES=3 python generate_squeeze.py adv --imgs-dir ${IMGS_DIR} --squeeze-type ${SQUZZEZ_MTD}
 CUDA_VISIBLE_DEVICES=3 python generate_detection_results.py --imgs-dir ${IMGS_DIR} --squeeze-type ${SQUZZEZ_MTD}
 CUDA_VISIBLE_DEVICES=3 python calculate_wAP.py --imgs-dir ${IMGS_DIR} --squeeze-type ${SQUZZEZ_MTD}
-CUDA_VISIBLE_DEVICES=3 python plot_curves.py --imgs-dir ${IMGS_DIR} --squeeze-type ${SQUZZEZ_MTD}
+CUDA_VISIBLE_DEVICES=3 python evaluate.py --imgs-dir ${IMGS_DIR} --squeeze-type ${SQUZZEZ_MTD}
