@@ -11,7 +11,7 @@ import pickle
 from tqdm import tqdm
 import shutil
 
-from perceptron.utils.image import load_image
+from perceptron.utils.image import load_image, draw_letterbox
 from perceptron.models.detection.keras_yolov3 import KerasYOLOv3Model
 from perceptron.zoo.yolov3.model import YOLOv3
 
@@ -67,7 +67,7 @@ def main(args):
         except:
             print('loading images error.')
             continue
-        
+
         try:
             output_benign = model.predictions(image_benign)
             output_adv = model.predictions(image_adv)
@@ -82,17 +82,25 @@ def main(args):
                 pickle.dump(output_benign_squz, f, protocol=pickle.HIGHEST_PROTOCOL)
             with open(os.path.join(output_adv_squz_dir, image_name_noext + '.pkl'), 'wb') as f:
                 pickle.dump(output_adv_squz, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+            # draw = draw_letterbox(image_benign, output_benign, (416, 416), model.class_names())
+            # draw.save('./temp/{0}_benign.png'.format(image_name_noext))
+            # draw = draw_letterbox(image_adv, output_adv, (416, 416), model.class_names())
+            # draw.save('./temp/{0}_adv.png'.format(image_name_noext))
+            # draw = draw_letterbox(image_benign_squz, output_benign_squz, (416, 416), model.class_names())
+            # draw.save('./temp/{0}_benign_squz.png'.format(image_name_noext))
+            # draw = draw_letterbox(image_adv_squz, output_adv_squz, (416, 416), model.class_names())
+            # draw.save('./temp/{0}_adv_squz.png'.format(image_name_noext))
         
         except:
             print(image_name, ' generating error.')
             continue
-        
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Detection output generation.")
     parser.add_argument('--data-dir', type=str, default='/home/yantao/workspace/datasets/wAP')
     parser.add_argument('--imgs-dir', type=str, default='bdd10k_test')
-    parser.add_argument('--squeeze-type', type=str, default='bit_5')
+    parser.add_argument('--squeeze-type', type=str, default='bit_7')
     args = parser.parse_args()
     main(args)

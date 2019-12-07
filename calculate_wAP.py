@@ -206,6 +206,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="wAP/mAP calculation.")
     parser.add_argument('--data-dir', type=str, default='/home/yantao/workspace/datasets/wAP')
     parser.add_argument('--imgs-dir', type=str, default='bdd10k_test')
-    parser.add_argument('--squeeze-type', type=str, default='bit_5')
+    parser.add_argument('--squeeze-type', type=str, default='bit_7')
     args = parser.parse_args()
     main_from_pickle(args)

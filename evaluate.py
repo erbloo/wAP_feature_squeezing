@@ -79,6 +79,7 @@ def generate_false_samples(benign_tup_list, adv_tup_list, th, dir_path):
             im2 = cv2.imread('/data/image/squeezed/depth-5/adv_squeezed_boxed/adv_adv_' + file_id + '.png')
             im = np.concatenate((im1, im2), axis=1)
             cv2.imwrite(dir_path + '/fn/fn_' + file_id + '.png', im)
+    return
 
 def fp_fn_curve(gt_array, pd_array):
     gt_array = gt_array.astype('float')
@@ -113,7 +114,7 @@ def calculate_error_rate(score_benign_list, score_adv_list):
     tpfptnfn = []
     min_er = [1, 0]
     while th <= 100:
-        temp_er, temp_re, temp_pr, tp, fp, tn ,fn = get_error( score_benign_list, score_adv_list, th)
+        temp_er, temp_re, temp_pr, tp, fp, tn ,fn = get_error(score_benign_list, score_adv_list, th)
         if temp_er <= min_er[0]:
             min_er[0] = temp_er
             min_er[1] = th
@@ -125,6 +126,7 @@ def calculate_error_rate(score_benign_list, score_adv_list):
     print('recall: ', recall)
     print('precision: ', precision)
     print('tpfptnfn: ', tpfptnfn)
+    return min_er[1]
 
 def plot_curves(gt_array, pd_array, roc_file=None, fpfn_file=None):
     fpr, tpr, ths = metrics.roc_curve(gt_array, pd_array)
@@ -146,6 +148,7 @@ def plot_curves(gt_array, pd_array, roc_file=None, fpfn_file=None):
     plt.show()
     if fpfn_file:
         plt.savefig(fpfn_file)
+    return
 
 def plot_curves_both(gt_array_wAP, pd_array_wAP, gt_array_mAP, pd_array_mAP, roc_file=None, fpfn_file=None):
     plt.figure()
@@ -175,6 +178,68 @@ def plot_curves_both(gt_array_wAP, pd_array_wAP, gt_array_mAP, pd_array_mAP, roc
 
     print("wAP auc: ", auc_wAP)
     print("mAP auc: ", auc_mAP)
+    return
+
+def temporal_simulate(th_wAP, wAP_benign_list, wAP_adv_list, th_mAP, mAP_benign_list, mAP_adv_list, r_age=3):
+    np.random.seed(0)
+    wAP_benign_single = np.where(np.array(wAP_benign_list) > th_wAP, 1, 0)
+    wAP_adv_single = np.where(np.array(wAP_adv_list) > th_wAP, 1, 0)
+    mAP_benign_single = np.where(np.array(mAP_benign_list) > th_mAP, 1, 0)
+    mAP_adv_single = np.where(np.array(mAP_adv_list) > th_mAP, 1, 0)
+
+    n_samples = len(wAP_benign_list)
+    gt_single = np.random.rand(n_samples)
+    gt_single = np.where(gt_single > 0.5, 1, 0)
+    gt_temporal = _temporal_convert(gt_single, r_age)
+
+    wAP_single = np.zeros(n_samples).astype(np.int)
+    mAP_single = np.zeros(n_samples).astype(np.int)
+    for idx in range(n_samples):
+        if gt_single[idx] == 0:
+            wAP_single[idx] = wAP_benign_single[idx]
+            mAP_single[idx] = mAP_benign_single[idx]
+        elif gt_single[idx] == 1:
+            wAP_single[idx] = wAP_adv_single[idx]
+            mAP_single[idx] = mAP_adv_single[idx]
+        else:
+            raise ValueError('Invalid element value, should be binary.')
+    wAP_temporal = _temporal_convert(wAP_single, r_age)
+    mAP_temporal = _temporal_convert(mAP_single, r_age)
+
+    acc_wAP_single = _calculate_temporal_acc(wAP_single, gt_temporal)
+    acc_mAP_single = _calculate_temporal_acc(mAP_single, gt_temporal)
+    acc_wAP_temporal = _calculate_temporal_acc(wAP_temporal, gt_temporal)
+    acc_mAP_temporal = _calculate_temporal_acc(mAP_temporal, gt_temporal)
+    print('acc_wAP_single : {0:.4f}'.format(acc_wAP_single))
+    print('acc_mAP_single : {0:.4f}'.format(acc_mAP_single))
+    print('acc_wAP_temporal : {0:.4f}'.format(acc_wAP_temporal))
+    print('acc_mAP_temporal : {0:.4f}'.format(acc_mAP_temporal))
+    return
+    
+def _calculate_temporal_acc(pd, gt):
+    assert len(pd.shape) <= 1 and len(pd.shape) == len(gt.shape)
+    num = pd.shape[0]
+    corrects = 0
+    for temp_pd, temp_gt in zip(pd, gt):
+        if temp_pd == temp_gt:
+            corrects += 1
+    return float(corrects) / float(num)
+
+def _temporal_convert(gt_single, r_age):
+    assert len(gt_single.shape) <= 1
+    n_samples = gt_single.shape[0]
+    gt_temporal = np.zeros(n_samples).astype(np.int)
+    for idx in range(n_samples - 2):
+        temp_flag = False
+        for sub_idx in range(r_age):
+            if gt_single[idx + sub_idx] != 1:
+                break
+            if sub_idx == r_age - 1:
+                temp_flag = True
+        if temp_flag:
+            for sub_idx in range(r_age):
+                gt_temporal[idx + sub_idx] = 1
+    return gt_temporal
 
 def main(args):
     result_path = "{1}_{0}.csv".format(args.squeeze_type, args.imgs_dir)
@@ -194,8 +259,8 @@ def main(args):
         wAP_adv_list.append(float(wAP_adv))
         mAP_benign_list.append(1 - float(mAP_benign))
         mAP_adv_list.append(1 - float(mAP_adv))
-    calculate_error_rate(wAP_benign_list, wAP_adv_list)
-    calculate_error_rate(mAP_benign_list, mAP_adv_list)
+    th_wAP = calculate_error_rate(wAP_benign_list, wAP_adv_list)
+    th_mAP = calculate_error_rate(mAP_benign_list, mAP_adv_list)
 
     pd_wAP = np.asarray(wAP_benign_list + wAP_adv_list) / np.maximum(max(wAP_benign_list), max(wAP_adv_list))
     gt_wAP = np.asarray([0] * len(wAP_benign_list) + [1] * len(wAP_adv_list))
@@ -205,11 +270,13 @@ def main(args):
 
     plot_curves_both(gt_wAP, pd_wAP, gt_mAP, pd_mAP, 'roc_{0}.png'.format(args.squeeze_type), 'fpfn_{0}.png'.format(args.squeeze_type))
     plot_curves(gt_wAP, pd_wAP, 'roc_wAP_{0}.png'.format(args.squeeze_type), 'fpfn_wAP_{0}.png'.format(args.squeeze_type))
+
+    temporal_simulate(th_wAP, wAP_benign_list, wAP_adv_list, th_mAP, mAP_benign_list, mAP_adv_list)
     
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot.")
     parser.add_argument('--imgs-dir', type=str, default='bdd10k_test')
-    parser.add_argument('--squeeze-type', type=str, default='bit_5')
+    parser.add_argument('--squeeze-type', type=str, default='bit_7')
     args = parser.parse_args()
     main(args)
