@@ -9,6 +9,7 @@ import pdb
 from collections import defaultdict
 import pickle
 import argparse
+from sklearn.utils.linear_assignment_ import linear_assignment
 
 from perceptron.utils.image import letterbox_image, draw_letterbox
 from perceptron.utils.criteria.detection import WeightedAP
@@ -84,6 +85,73 @@ def cal_mAP(gt_dict, pred_dict, num_classes, th_conf=0.5):
             mAP = 0.0
         return mAP
 
+
+def cal_mIoU(gt_dict, pred_dict, num_classes):
+    # get unique class
+    unique_cls = set()
+    for temp_cls in gt_dict['classes']:
+        unique_cls.add(temp_cls)
+    for temp_cls in pred_dict['classes']:
+        unique_cls.add(temp_cls)
+    # arrange data by classes
+    gt_cls_dict = {}
+    pd_cls_dict = {}
+    iou_cls_dict = {}
+    for temp_cls in unique_cls:
+        gt_cls_dict[temp_cls] = []
+        pd_cls_dict[temp_cls] = []
+        iou_cls_dict[temp_cls] = 0.0
+    for idx in range(len(gt_dict['boxes'])):
+        temp_bbox = gt_dict['boxes'][idx]
+        temp_cls = int(gt_dict['classes'][idx])
+        assert temp_cls in gt_cls_dict.keys()
+        gt_cls_dict[temp_cls].append(temp_bbox)
+    for idx in range(len(pred_dict['boxes'])):
+        temp_bbox = pred_dict['boxes'][idx]
+        temp_cls = int(pred_dict['classes'][idx])
+        assert temp_cls in pd_cls_dict.keys()
+        pd_cls_dict[temp_cls].append(temp_bbox)
+    # calculate iou for each class
+    for curt_cls in unique_cls:
+        temp_pd_boxes = pd_cls_dict[curt_cls]
+        temp_gt_boxes = gt_cls_dict[curt_cls]
+        if len(temp_pd_boxes) == 0 or len(temp_gt_boxes) == 0:
+            # conitnue remain iou as default 0.
+            continue
+        # Calculate iou between every pred and ground truth box
+        iou_map = np.zeros((len(temp_pd_boxes), len(temp_gt_boxes)))
+        for idx_pd in range(len(temp_pd_boxes)):
+            for idx_gt in range(len(temp_gt_boxes)):
+                ov = 0.0
+                bb = temp_pd_boxes[idx_pd]
+                bbgt = temp_gt_boxes[idx_gt]
+                bi = [max(bb[0], bbgt[0]), 
+                      max(bb[1], bbgt[1]), 
+                      min(bb[2], bbgt[2]), 
+                      min(bb[3], bbgt[3])]
+                iw = bi[2] - bi[0] + 1
+                ih = bi[3] - bi[1] + 1
+                if iw > 0 and ih > 0:
+                    ua = (bb[2] - bb[0] + 1) * (bb[3] - bb[1] + 1) + \
+                         (bbgt[2] - bbgt[0] + 1) * (bbgt[3] - bbgt[1] + 1) \
+                            - iw * ih
+                    ov = iw * ih / ua
+                iou_map[idx_pd][idx_gt] = ov
+        # Match prediction and ground truth by Hungarian Algorithm
+        matched_idx = linear_assignment(1 - iou_map)
+        iou_sum = 0.0
+        for temp_pair in matched_idx:
+            iou_sum += iou_map[temp_pair[0]][temp_pair[1]]
+        # total number of bboxes is calculated as num_pd + num_gt - num_pairs
+        iou_cls_dict[idx] = iou_sum / \
+            float(len(temp_pd_boxes) + len(temp_gt_boxes) - matched_idx.shape[0])
+    # take mean of iou_cls_dict
+    IoU_sum = 0.0
+    for _, val in iou_cls_dict.items():
+        IoU_sum += val
+    return IoU_sum / float(num_classes)
+
+
 def preprocess_ground_truth(ground_truth):
     gt_counter_per_class = defaultdict(int)
     objects = []
@@ -98,6 +166,7 @@ def preprocess_ground_truth(ground_truth):
         gt_counter_per_class[class_name] += 1
 
     return gt_counter_per_class, objects 
+
         
 def voc_ap(rec, prec):
     """
@@ -143,6 +212,7 @@ def voc_ap(rec, prec):
     for i in i_list:
         ap += ((mrec[i] - mrec[i - 1]) * mpre[i])
     return ap, mrec, mpre
+
 
 def main_from_pickle(args):
     imgs_dir = args.imgs_dir
