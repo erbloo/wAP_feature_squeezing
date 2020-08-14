@@ -86,7 +86,7 @@ def cal_mAP(gt_dict, pred_dict, num_classes, th_conf=0.5):
         return mAP
 
 
-def cal_mIoU(gt_dict, pred_dict, num_classes):
+def cal_mIoU(gt_dict, pred_dict):
     # get unique class
     unique_cls = set()
     for temp_cls in gt_dict['classes']:
@@ -253,6 +253,8 @@ def main_from_pickle(args):
 
         wAP_score_benign = weighted_ap.distance_score(output_benign, output_benign_squz)
         mAP_score_benign = cal_mAP(output_benign, output_benign_squz, num_classes=80)
+        # Add mIoU calculation here
+        mIoU_score_benign = cal_mIoU(output_benign, output_benign_squz)
 
         with open(os.path.join(pickle_adv_dir, image_name_noext + '.pkl'), 'rb') as handle:
             output_adv = pickle.load(handle)
@@ -262,12 +264,17 @@ def main_from_pickle(args):
 
         wAP_score_adv = weighted_ap.distance_score(output_adv, output_adv_squz)
         mAP_score_adv = cal_mAP(output_adv, output_adv_squz, num_classes=80)
+        # Add mIoU calculation here
+        mIoU_score_adv = cal_mIoU(output_adv, output_adv_squz)
 
         # print('wAP benign : ', wAP_score_benign)
         # print('wAP adv : ', wAP_score_adv)
         # print('mAP benign : ', mAP_score_benign)
         # print('mAP adv : ', mAP_score_adv)
+        # print('mIoU benign : ', mIoU_score_benign)
+        # print('mIoU adv : ', mIoU_score_adv)
 
+        # (Todo): Add mIoU results
         with open(csv_file_name, 'a') as out_file:
             out_file.write('{0},{1},{2},{3},{4}\n'.format(image_name_noext, str(wAP_score_benign), str(wAP_score_adv), str(mAP_score_benign), str(mAP_score_adv)))
 
