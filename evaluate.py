@@ -180,12 +180,15 @@ def plot_curves_both(gt_array_wAP, pd_array_wAP, gt_array_mAP, pd_array_mAP, roc
     print("mAP auc: ", auc_mAP)
     return
 
-def temporal_simulate(th_wAP, wAP_benign_list, wAP_adv_list, th_mAP, mAP_benign_list, mAP_adv_list, r_age=3):
+def temporal_simulate(th_wAP, wAP_benign_list, wAP_adv_list, th_mAP, mAP_benign_list, mAP_adv_list, th_mIOU, mIOU_benign_list,mIOU_adv_list, r_age=3):
     np.random.seed(0)
     wAP_benign_single = np.where(np.array(wAP_benign_list) > th_wAP, 1, 0)
     wAP_adv_single = np.where(np.array(wAP_adv_list) > th_wAP, 1, 0)
     mAP_benign_single = np.where(np.array(mAP_benign_list) > th_mAP, 1, 0)
     mAP_adv_single = np.where(np.array(mAP_adv_list) > th_mAP, 1, 0)
+    mIOU_benign_single = np.where(np.array(mIOU_benign_list) > th_mIOU, 1, 0)
+    mIOU_adv_single = np.where(np.array(mIOU_adv_list) > th_mIOU, 1, 0)
+   
 
     n_samples = len(wAP_benign_list)
     gt_single = np.random.rand(n_samples)
@@ -194,26 +197,34 @@ def temporal_simulate(th_wAP, wAP_benign_list, wAP_adv_list, th_mAP, mAP_benign_
 
     wAP_single = np.zeros(n_samples).astype(np.int)
     mAP_single = np.zeros(n_samples).astype(np.int)
+    mIOU_single = np.zeros(n_samples).astype(np.int)
     for idx in range(n_samples):
         if gt_single[idx] == 0:
             wAP_single[idx] = wAP_benign_single[idx]
             mAP_single[idx] = mAP_benign_single[idx]
+            mIOU_single[idx] = mIOU_benign_single[idx]
         elif gt_single[idx] == 1:
             wAP_single[idx] = wAP_adv_single[idx]
             mAP_single[idx] = mAP_adv_single[idx]
+            mIOU_single[idx] = mIOU_adv_single[idx]
         else:
             raise ValueError('Invalid element value, should be binary.')
     wAP_temporal = _temporal_convert(wAP_single, r_age)
     mAP_temporal = _temporal_convert(mAP_single, r_age)
-
+    mIOU_temporal = _temporal_convert(mIOU_single, r_age)
     acc_wAP_single = _calculate_temporal_acc(wAP_single, gt_temporal)
     acc_mAP_single = _calculate_temporal_acc(mAP_single, gt_temporal)
+    acc_mIOU_single = _calculate_temporal_acc(mIOU_single, gt_temporal)
     acc_wAP_temporal = _calculate_temporal_acc(wAP_temporal, gt_temporal)
     acc_mAP_temporal = _calculate_temporal_acc(mAP_temporal, gt_temporal)
+    acc_mIOU_temporal = _calculate_temporal_acc(mIOU_temporal, gt_temporal)
     print('acc_wAP_single : {0:.4f}'.format(acc_wAP_single))
+    
     print('acc_mAP_single : {0:.4f}'.format(acc_mAP_single))
+    print('acc_mIOU_single : {0:.4f}'.format(acc_mIOU_single))
     print('acc_wAP_temporal : {0:.4f}'.format(acc_wAP_temporal))
     print('acc_mAP_temporal : {0:.4f}'.format(acc_mAP_temporal))
+    print('acc_mIOU_temporal : {0:.4f}'.format(acc_mIOU_temporal))
     return
     
 def _calculate_temporal_acc(pd, gt):
@@ -248,30 +259,38 @@ def main(args):
     wAP_adv_list = []
     mAP_benign_list = []
     mAP_adv_list = []
+    mIOU_benign_list = []
+    mIOU_adv_list = []
 
     is_head = True
     for line in result_f:
         if is_head:
             is_head = False
             continue
-        image_name, wAP_benign, wAP_adv, mAP_benign, mAP_adv = line.split(',')
+        image_name, wAP_benign, wAP_adv, mAP_benign, mAP_adv, mIOU_benign, mIOU_adv= line.split(',')
         wAP_benign_list.append(float(wAP_benign))
         wAP_adv_list.append(float(wAP_adv))
         mAP_benign_list.append(1 - float(mAP_benign))
         mAP_adv_list.append(1 - float(mAP_adv))
+        mIOU_benign_list.append(2 - float(mIOU_benign))
+        mIOU_adv_list.append(2 - float(mIOU_adv))
     th_wAP = calculate_error_rate(wAP_benign_list, wAP_adv_list)
     th_mAP = calculate_error_rate(mAP_benign_list, mAP_adv_list)
+    th_mIOU = calculate_error_rate(mIOU_benign_list, mIOU_adv_list)
 
     pd_wAP = np.asarray(wAP_benign_list + wAP_adv_list) / np.maximum(max(wAP_benign_list), max(wAP_adv_list))
     gt_wAP = np.asarray([0] * len(wAP_benign_list) + [1] * len(wAP_adv_list))
 
     pd_mAP = np.asarray(mAP_benign_list + mAP_adv_list) / np.maximum(max(mAP_benign_list), max(mAP_adv_list))
     gt_mAP = np.asarray([0] * len(mAP_benign_list) + [1] * len(mAP_adv_list))
+    
+    pd_mIOU = np.asarray(mIOU_benign_list + mIOU_adv_list) / np.maximum(max(mIOU_benign_list), max(mIOU_adv_list))
+    gt_mIOU = np.asarray([0] * len(mIOU_benign_list) + [1] * len(mIOU_adv_list))
 
     plot_curves_both(gt_wAP, pd_wAP, gt_mAP, pd_mAP, 'roc_{0}.png'.format(args.squeeze_type), 'fpfn_{0}.png'.format(args.squeeze_type))
     plot_curves(gt_wAP, pd_wAP, 'roc_wAP_{0}.png'.format(args.squeeze_type), 'fpfn_wAP_{0}.png'.format(args.squeeze_type))
 
-    temporal_simulate(th_wAP, wAP_benign_list, wAP_adv_list, th_mAP, mAP_benign_list, mAP_adv_list)
+    temporal_simulate(th_wAP, wAP_benign_list, wAP_adv_list, th_mAP, mAP_benign_list, mAP_adv_list,th_mIOU, mIOU_benign_list,mIOU_adv_list)
     
 
 if __name__ == "__main__":
